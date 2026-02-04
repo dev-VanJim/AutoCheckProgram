@@ -46,6 +46,7 @@ public class MainActivity extends AppCompatActivity {
             return insets;
         });
         // 上传测试
+        // ssh测试2
         PackageManager packageManager = getPackageManager();
 
         List<ApplicationInfo> applications = packageManager.getInstalledApplications(PackageManager.GET_META_DATA);
