@@ -45,7 +45,7 @@ public class MainActivity extends AppCompatActivity {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
-
+        // 上传测试
         PackageManager packageManager = getPackageManager();
 
         List<ApplicationInfo> applications = packageManager.getInstalledApplications(PackageManager.GET_META_DATA);
