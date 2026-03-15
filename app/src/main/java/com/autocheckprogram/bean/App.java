@@ -1,4 +1,4 @@
-package com.example.autocheckprogram.bean;
+package com.autocheckprogram.bean;
 
 import android.graphics.drawable.Drawable;
 

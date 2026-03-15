@@ -1,4 +1,4 @@
-package com.example.autocheckprogram;
+package com.autocheckprogram;
 
 import org.junit.Test;
 

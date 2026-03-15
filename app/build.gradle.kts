@@ -5,13 +5,13 @@ plugins {
 }
 
 android {
-    namespace = "com.example.autocheckprogram"
+    namespace = "com.autocheckprogram"
     compileSdk {
         version = release(36)
     }
 
     defaultConfig {
-        applicationId = "com.example.autocheckprogram"
+        applicationId = "com.autocheckprogram"
         minSdk = 24
         targetSdk = 36
         versionCode = 1

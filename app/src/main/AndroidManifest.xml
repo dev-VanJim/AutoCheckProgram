@@ -1,10 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
-
-    <uses-permission
-        android:name="android.permission.QUERY_ALL_PACKAGES"
-        tools:ignore="PackageVisibilityPolicy,QueryAllPackagesPermission" />
+    <!-- <uses-permission -->
+    <!-- android:name="android.permission.QUERY_ALL_PACKAGES" -->
+    <!-- tools:ignore="PackageVisibilityPolicy,QueryAllPackagesPermission" /> -->
+    <queries>
+        <package android:name="com.tencent.mobileqq" /> <!-- qq包名 -->
+        <package android:name="com.mihoyo.hyperion" /> <!-- 米游社包名 -->
+    </queries>
 
     <application
         android:allowBackup="true"
@@ -16,11 +19,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.AppCompat.DayNight">
         <activity
-            android:name=".MainActivity2"
-            android:exported="false"
-            android:theme="@style/Theme.AutoCheckProgram" />
-        <activity
-            android:name=".MainActivity"
+            android:name="com.autocheckprogram.MainActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -28,6 +27,20 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <service
+            android:name="com.autocheckprogram.AutoCheckService"
+            android:enabled="true"
+            android:exported="false"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/check_service_config" />
+        </service>
     </application>
 
 </manifest>
