@@ -22,7 +22,9 @@ import java.util.regex.Pattern;
 
 public class AutoCheckService extends AccessibilityService {
 
-    private final String TAG = "AccessibilityEventTest";
+    private static final String TAG = "AccessibilityEventTest";
+    // 米游社未成年人模式弹窗类名
+    private static final String MI_GAMING_COMMUNITY_MINOR_TIP = "com.mihoyo.hyperion.teenage.ui.a";
 
     private boolean isCheckPage = false;
 
@@ -30,13 +32,25 @@ public class AutoCheckService extends AccessibilityService {
 
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
-//        Log.d(TAG, String.valueOf(event));
-
-        Log.d(TAG, String.valueOf(MainActivity.isChecking));
+        
         if (!MainActivity.isChecking) return;
 
         AccessibilityNodeInfo nodeInfo = event.getSource();
         if (nodeInfo == null) return;
+
+        CharSequence eventClassName = event.getClassName();
+        if (eventClassName == null) return;
+
+        if (MI_GAMING_COMMUNITY_MINOR_TIP.contentEquals(eventClassName)) {
+            AccessibilityNodeInfo iKnewNode;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM)
+                iKnewNode = nodeInfo.findAccessibilityNodeInfosByText("我知道了").getFirst();
+            else
+                iKnewNode = nodeInfo.findAccessibilityNodeInfosByText("我知道了").get(0);
+
+            boolean clickResult = iKnewNode.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+            if (!clickResult) return;
+        }
 
 //        if (event.getEventType() == AccessibilityEvent.TYPE_VIEW_CLICKED)
 //            Log.d("AccessibilityEventTest:", String.valueOf(nodeInfo));
@@ -66,7 +80,6 @@ public class AutoCheckService extends AccessibilityService {
 
             SystemClock.sleep(2000);
 
-            CharSequence eventClassName = event.getClassName();
             if (eventClassName == null) return;
 
             if (!isCheckPage && "com.mihoyo.hyperion.web2.MiHoYoWebActivity".contentEquals(eventClassName))
