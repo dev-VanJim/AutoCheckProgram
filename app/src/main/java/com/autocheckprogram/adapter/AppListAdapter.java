@@ -14,9 +14,11 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.autocheckprogram.AutoCheckService;
 import com.autocheckprogram.MainActivity;
 import com.autocheckprogram.R;
 import com.autocheckprogram.bean.App;
+import com.autocheckprogram.enums.PageView;
 
 
 import java.util.List;
@@ -89,6 +91,7 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ListView
 //                    Log.d("IntentContentTest", String.valueOf(intent));
 
                     MainActivity.isChecking = true;
+                    AutoCheckService.nowPage = PageView.HOME_PAGE;
                     context.startActivity(intent);
                 }
 

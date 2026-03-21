@@ -22,10 +22,6 @@ import java.util.LinkedList;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
-
-    public static String MI_GAMING_COMMUNITY_PACKAGE = "com.mihoyo.hyperion";
-    public static String QQ_PACKAGE = "com.tencent.mobileqq";
-
     public static boolean isChecking = false;
 
     @Override

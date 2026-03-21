@@ -6,5 +6,5 @@
     android:canPerformGestures="true"
     android:canRetrieveWindowContent="true"
     android:description="@string/accessibility_tip"
-    android:notificationTimeout="1000"
+    android:notificationTimeout="50"
     android:packageNames="com.mihoyo.hyperion,com.tencent.mobileqq" />
