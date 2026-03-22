@@ -17,6 +17,7 @@ import com.autocheckprogram.enums.PageView;
 import java.time.LocalDate;
 import java.util.Calendar;
 import java.util.List;
+import java.util.Random;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -64,7 +65,7 @@ public class AutoCheckService extends AccessibilityService {
         if (!MainActivity.isChecking) return;
 
         AccessibilityNodeInfo nodeInfo = event.getSource();
-        Log.d(TAG, "nodeInfo：" + nodeInfo);
+//        Log.d(TAG, "nodeInfo：" + nodeInfo);
         if (nodeInfo == null) return;
 
         CharSequence eventClassName = event.getClassName();
@@ -84,7 +85,7 @@ public class AutoCheckService extends AccessibilityService {
             else if (nowPage != PageView.AD_PAGE && AD_PAGE.contentEquals(eventClassName))
                 nowPage = PageView.AD_PAGE;
 
-            Log.d(TAG, String.valueOf(nowPage));
+//            Log.d(TAG, String.valueOf(nowPage));
 
             // 如果正在《《米游社》》主页
             if (nowPage == PageView.HOME_PAGE) {
@@ -104,7 +105,7 @@ public class AutoCheckService extends AccessibilityService {
                     return;
 
                 AccessibilityNodeInfo targetTextNode = findContainTargetTextNode(nodeInfo, "月已累计签到");
-                Log.d(TAG, String.valueOf(targetTextNode));
+//                Log.d(TAG, String.valueOf(targetTextNode));
                 // 说明当前签到页面尚在加载
                 if (targetTextNode == null) return;
 
@@ -114,7 +115,7 @@ public class AutoCheckService extends AccessibilityService {
                 String stringCheckedDay = null;
                 if (matcher.find() && matcher.find()) {
                     stringCheckedDay = matcher.group();
-                    Log.d(TAG, "签到天数：" + stringCheckedDay);
+//                    Log.d(TAG, "签到天数：" + stringCheckedDay);
                 }
 
                 if (stringCheckedDay == null) {
@@ -152,7 +153,7 @@ public class AutoCheckService extends AccessibilityService {
                 }
 
                 targetTextNode = findContainTargetTextNode(targetTextNode, "第" + (checkedDay + 1) + "天");
-                Log.d(TAG, "签到节点：" + targetTextNode);
+//                Log.d(TAG, "签到节点：" + targetTextNode);
                 if (targetTextNode == null) return;
 
                 // 点击目标位置业务
@@ -163,7 +164,8 @@ public class AutoCheckService extends AccessibilityService {
                 path.moveTo(rect.centerX(), rect.centerY());
 
                 GestureDescription.Builder builder = new GestureDescription.Builder();
-                GestureDescription.StrokeDescription stroke = new GestureDescription.StrokeDescription(path, 0, 50);
+                simulateReactionTime();
+                GestureDescription.StrokeDescription stroke = new GestureDescription.StrokeDescription(path, 0, 40 + random.nextInt(11));
                 GestureDescription gestureDescription = builder.addStroke(stroke).build();
                 dispatchGesture(gestureDescription,
                         new GestureResultCallback() {
@@ -180,7 +182,15 @@ public class AutoCheckService extends AccessibilityService {
                             }
                         },
                         null);
+
+            } else if (nowPage == PageView.AD_PAGE) {
+                // 先通过id去点击，没找到的话再通过字符串点击。
+                // 理论上通过id去查找控件的方式，效率和性能上是高于通过字符串查找的，特别是字符串的比较是非常耗时的。
+                boolean clickedResult = toClickTargetViewById(nodeInfo, MI_GAMING_COMMUNITY_PACKAGE + ":" + "id/mSplashBtJump");
+                if (!clickedResult) toClickTargetViewByText(nodeInfo, "跳过");
+//                Log.d(TAG, "点击结果：" + clickedResult);
             }
+
         } else if (QQ_PACKAGE.equals(pagePackageName)) {
 
             // QQ签到功能将在下个版本推出
@@ -236,6 +246,26 @@ public class AutoCheckService extends AccessibilityService {
 //            Log.d("AccessibilityEventTest:", String.valueOf(testList.size()));
     }
 
+    // 随机数生成器
+    private final Random random = new Random();
+
+    /**
+     * 模拟人类反义的延迟，避免被反作弊机制捕捉。
+     * 调用该方法，会使当前线程延迟 200~300 ms后再继续执行。
+     */
+    private void simulateReactionTime() {
+        // 随机延迟时间基数
+        long randomDelayTime = 200;
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM)
+            randomDelayTime += random.nextLong(101);
+        else
+            randomDelayTime += random.nextInt(101);
+
+        Log.d(TAG, "延迟时间：" + randomDelayTime);
+        SystemClock.sleep(randomDelayTime);
+    }
+
     private AccessibilityNodeInfo findContainTargetTextNode(AccessibilityNodeInfo nodeInfo, String targetText) {
         if (nodeInfo == null) return null;
 
@@ -289,6 +319,9 @@ public class AutoCheckService extends AccessibilityService {
     }
 
     private boolean toClickTargetView(AccessibilityNodeInfo targetView) {
+        // 模拟点击延迟
+        simulateReactionTime();
+
         // 如果该控件不可点击，尝试点击其父控件
         if (!targetView.isClickable()) {
             targetView = targetView.getParent();
