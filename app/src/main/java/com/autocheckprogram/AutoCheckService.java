@@ -104,14 +104,27 @@ public class AutoCheckService extends AccessibilityService {
                 if (findContainTargetTextNode(nodeInfo, "请在此绑定你的游戏账号") != null)
                     return;
 
-                AccessibilityNodeInfo targetTextNode = findContainTargetTextNode(nodeInfo, "月已累计签到");
+                Log.d(TAG, String.valueOf(getViewTree(nodeInfo)));
+
+                /*
+                checkInfoNode为记录了签到信息的节点。节点数据如下：
+                    [0层|View|null||null|false]
+                        --> [1层|View|null||null|false]
+		                    --> [2层|View|null|3月已累计签到n天|null|false] （记录已签到数据的节点）
+	                    --> [1层|View|null||null|false]
+		                    --> [2层|View|null|漏签m天|null|false]         （记录漏签数据的节点）
+	                    --> [1层|Image|null|00489da775d43ad27c467a160941d770_5659954546777419348|null|false]
+                 */
+                AccessibilityNodeInfo checkInfoNode = findCheckInfoNodeByText(nodeInfo);
+                // 没找到记录了本月签到信息的节点，说明当前签到页面尚在加载。
+                if (checkInfoNode == null) return;
+
+                AccessibilityNodeInfo checkedInfoNode = findCheckedInfoNode(checkInfoNode);
+                AccessibilityNodeInfo missedCheckInfoNode = findMissedCheckInfoNode(checkInfoNode);
 //                Log.d(TAG, String.valueOf(targetTextNode));
-                // 说明当前签到页面尚在加载
-                if (targetTextNode == null) return;
 
-                Matcher matcher = pattern.matcher(targetTextNode.getText());
-
-                // 已签到天数
+                Matcher matcher = pattern.matcher(checkedInfoNode.getText());
+                // 已签到天数字符串信息
                 String stringCheckedDay = null;
                 if (matcher.find() && matcher.find()) {
                     stringCheckedDay = matcher.group();
@@ -123,65 +136,80 @@ public class AutoCheckService extends AccessibilityService {
                     return;
                 }
 
+
+                matcher = pattern.matcher(missedCheckInfoNode.getText());
+                // 为签到天数字符串信息
+                String stringMissedCheckDay = null;
+                if (matcher.find()) {
+                    stringMissedCheckDay = matcher.group();
+                }
+
+                if (stringMissedCheckDay == null) {
+                    return;
+                }
+
+                // 今天是本月多少号
                 int dayOfThisMonth;
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
                     dayOfThisMonth = LocalDate.now().getDayOfMonth();
                 else
                     dayOfThisMonth = Calendar.getInstance().get(Calendar.DAY_OF_MONTH);
 
-                // 将已签到天数转为数字，方便比较
+                // 将已签到天数和漏签天数转为数字，方便比较
                 int checkedDay = Integer.parseInt(stringCheckedDay);
-                if (checkedDay == dayOfThisMonth) {
-                    // 已签到天数等于今天日期，表示今日已签到
+                int missedCheckDay = Integer.parseInt(stringMissedCheckDay);
+                // 已签到天数 + 漏签天数 = 用于判定的天数
+                int toBeDetermined = checkedDay + missedCheckDay;
+
+//                Log.d(TAG, "toBeDetermined = " + toBeDetermined);
+                if (toBeDetermined == dayOfThisMonth) {
+                    // 已签到天数 + 漏签天数 = 今天日期，表示今日已签到
 //                    Log.d(TAG, "今日已签到！");
+
                     MainActivity.isChecking = false;
 
-                    // 三连返回
+                    // 三连返回，返回《绝绝子》
                     for (int i = 0; i < 3; i++) {
+                        simulateReactionTime();
                         performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK);
-                        SystemClock.sleep(500);
                     }
-                    return;
+                } else if (toBeDetermined == dayOfThisMonth - 1) {
+                    // 已签到天数 + 漏签天数 = 本月日期数 - 1，说明今日还未签到
+
+                    AccessibilityNodeInfo targetTextNode = checkInfoNode.getParent();
+
+                    targetTextNode = findContainTargetTextNode(targetTextNode, "第" + (checkedDay + 1) + "天"); // 这里遍历的开始节点还能进行优化
+
+                    // 没找到要签到的节点
+                    if (targetTextNode == null) return;
+
+                    // 点击目标位置业务
+                    Rect rect = new Rect();
+                    targetTextNode.getBoundsInScreen(rect);
+
+                    Path path = new Path();
+                    path.moveTo(rect.centerX(), rect.centerY());
+
+                    GestureDescription.Builder builder = new GestureDescription.Builder();
+                    simulateReactionTime();
+                    GestureDescription.StrokeDescription stroke = new GestureDescription.StrokeDescription(path, 0, 40 + random.nextInt(11));
+                    GestureDescription gestureDescription = builder.addStroke(stroke).build();
+                    dispatchGesture(gestureDescription,
+                            new GestureResultCallback() {
+                                @Override
+                                public void onCompleted(GestureDescription gestureDescription) {
+                                    super.onCompleted(gestureDescription);
+                                    Log.d(TAG, "执行成功！");
+                                }
+
+                                @Override
+                                public void onCancelled(GestureDescription gestureDescription) {
+                                    super.onCancelled(gestureDescription);
+                                    Log.d(TAG, "取消执行！");
+                                }
+                            },
+                            null);
                 }
-
-                // 漏签的业务逻辑还需要完善！！！
-//            if (checkedDay == 0 && dayOfTheMonth != 1)
-//                return;
-
-                for (int i = 0; i < 3; i++) {
-                    targetTextNode = targetTextNode.getParent();
-                }
-
-                targetTextNode = findContainTargetTextNode(targetTextNode, "第" + (checkedDay + 1) + "天");
-//                Log.d(TAG, "签到节点：" + targetTextNode);
-                if (targetTextNode == null) return;
-
-                // 点击目标位置业务
-                Rect rect = new Rect();
-                targetTextNode.getBoundsInScreen(rect);
-
-                Path path = new Path();
-                path.moveTo(rect.centerX(), rect.centerY());
-
-                GestureDescription.Builder builder = new GestureDescription.Builder();
-                simulateReactionTime();
-                GestureDescription.StrokeDescription stroke = new GestureDescription.StrokeDescription(path, 0, 40 + random.nextInt(11));
-                GestureDescription gestureDescription = builder.addStroke(stroke).build();
-                dispatchGesture(gestureDescription,
-                        new GestureResultCallback() {
-                            @Override
-                            public void onCompleted(GestureDescription gestureDescription) {
-                                super.onCompleted(gestureDescription);
-                                Log.d(TAG, "执行成功！");
-                            }
-
-                            @Override
-                            public void onCancelled(GestureDescription gestureDescription) {
-                                super.onCancelled(gestureDescription);
-                                Log.d(TAG, "取消执行！");
-                            }
-                        },
-                        null);
 
             } else if (nowPage == PageView.AD_PAGE) {
                 // 先通过id去点击，没找到的话再通过字符串点击。
@@ -244,6 +272,27 @@ public class AutoCheckService extends AccessibilityService {
 //        List<AccessibilityNodeInfo> testList = nodeInfo.findAccessibilityNodeInfosByViewId("com.tencent.mobileqq:id/ba1");
 //        if (testList != null)
 //            Log.d("AccessibilityEventTest:", String.valueOf(testList.size()));
+    }
+
+    private AccessibilityNodeInfo findMissedCheckInfoNode(AccessibilityNodeInfo checkInfoNode) {
+        return checkInfoNode.getChild(1).getChild(0);
+    }
+
+    private AccessibilityNodeInfo findCheckedInfoNode(AccessibilityNodeInfo checkInfoNode) {
+        return checkInfoNode.getChild(0).getChild(0);
+    }
+
+    /**
+     * 找到记录了本月签到信息的节点
+     *
+     * @param nodeInfo 根节点信息，目标节点会从根节点开始，遍历进行查找。
+     * @return 本月签到信息节点，没找到返回null。
+     */
+    private AccessibilityNodeInfo findCheckInfoNodeByText(AccessibilityNodeInfo nodeInfo) {
+        AccessibilityNodeInfo targetTextNode = findContainTargetTextNode(nodeInfo, "月已累计签到");
+        if (targetTextNode == null) return null;
+
+        return targetTextNode.getParent().getParent();
     }
 
     // 随机数生成器
