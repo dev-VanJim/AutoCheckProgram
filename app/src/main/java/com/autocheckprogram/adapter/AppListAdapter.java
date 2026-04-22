@@ -90,6 +90,9 @@ public class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ListView
 
 //                    Log.d("IntentContentTest", String.valueOf(intent));
 
+                    // 重置所有按钮状态
+                    AutoCheckService.resetAllButtonStatus();
+
                     MainActivity.isChecking = true;
                     AutoCheckService.nowPage = PageView.HOME_PAGE;
                     context.startActivity(intent);

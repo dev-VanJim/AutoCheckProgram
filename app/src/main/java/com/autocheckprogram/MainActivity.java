@@ -74,7 +74,6 @@ public class MainActivity extends AppCompatActivity {
 //        Log.d("AppStartTest", apps.toString());
 
         RecyclerView appList = findViewById(R.id.app_list);
-
 //        LinearLayoutManager linearLayoutManager = new LinearLayoutManager(this);
 //        linearLayoutManager.setOrientation(LinearLayoutManager.VERTICAL);
 

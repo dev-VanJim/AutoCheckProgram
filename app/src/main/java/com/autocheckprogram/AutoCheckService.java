@@ -46,16 +46,16 @@ public class AutoCheckService extends AccessibilityService {
 
 
     // 当前页面
-    public static PageView nowPage = PageView.HOME_PAGE;  // 是否需要加锁
+    public static PageView nowPage = PageView.HOME_PAGE;
 
     // 正则表达式，表示一个或多个数字
     private final static Pattern pattern = Pattern.compile("\\d+");
 
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
-//        Log.d("AccessibilityEventTest:", "进入！");
+        Log.d("AccessibilityEventTest:", "进入！");
 //        Log.d("AccessibilityEventTest:", String.valueOf(event));
-//
+
 //        AccessibilityNodeInfo testNodeInfo = event.getSource();
 //        if (testNodeInfo == null) return;
 //
@@ -73,8 +73,8 @@ public class AutoCheckService extends AccessibilityService {
 
         String pagePackageName = event.getPackageName().toString();
 
+        // 如果当前应用是米游社
         if (MI_GAMING_COMMUNITY_PACKAGE.equals(pagePackageName)) {
-
 
             if (nowPage != PageView.HOME_PAGE && HOME_PAGE.contentEquals(eventClassName))
                 nowPage = PageView.HOME_PAGE;
@@ -90,21 +90,28 @@ public class AutoCheckService extends AccessibilityService {
             // 如果正在《《米游社》》主页
             if (nowPage == PageView.HOME_PAGE) {
                 // 未成年人保护弹窗
-                if (MI_GAMING_COMMUNITY_MINOR_TIP_POPUP.contentEquals(eventClassName)) {
+                if (!CheckPageButtonStatus.MINOR_TIP_POPUP_CLICKED && MI_GAMING_COMMUNITY_MINOR_TIP_POPUP.contentEquals(eventClassName)) {
                     // 记录点击事件结果
                     boolean clickResult = toClickTargetViewByText(nodeInfo, "我知道了");
 
                     if (!clickResult) return;
+
+                    CheckPageButtonStatus.MINOR_TIP_POPUP_CLICKED = true;
                 }
 
-                toClickTargetViewByText(nodeInfo, "签到福利");
+                if (!CheckPageButtonStatus.ENTER_CHECK_BUTTON_CLICKED) {
+                    boolean clickResult = toClickTargetViewByText(nodeInfo, "签到福利");
+                    if (clickResult) {
+                        CheckPageButtonStatus.ENTER_CHECK_BUTTON_CLICKED = true;
+                    }
+                }
 
             } else if (nowPage == PageView.CHECK_PAGE) {
-                // 说明当前签到页面尚在加载 ↓
+                // 说明当前签到页面尚在加载
                 if (findContainTargetTextNode(nodeInfo, "请在此绑定你的游戏账号") != null)
                     return;
 
-                Log.d(TAG, String.valueOf(getViewTree(nodeInfo)));
+//                Log.d(TAG, String.valueOf(getViewTree(nodeInfo)));
 
                 /*
                 checkInfoNode为记录了签到信息的节点。节点数据如下：
@@ -119,7 +126,9 @@ public class AutoCheckService extends AccessibilityService {
                 // 没找到记录了本月签到信息的节点，说明当前签到页面尚在加载。
                 if (checkInfoNode == null) return;
 
+                // [2层|View|null|3月已累计签到n天|null|false]
                 AccessibilityNodeInfo checkedInfoNode = findCheckedInfoNode(checkInfoNode);
+                // [2层|View|null|漏签m天|null|false]
                 AccessibilityNodeInfo missedCheckInfoNode = findMissedCheckInfoNode(checkInfoNode);
 //                Log.d(TAG, String.valueOf(targetTextNode));
 
@@ -158,11 +167,11 @@ public class AutoCheckService extends AccessibilityService {
                 // 将已签到天数和漏签天数转为数字，方便比较
                 int checkedDay = Integer.parseInt(stringCheckedDay);
                 int missedCheckDay = Integer.parseInt(stringMissedCheckDay);
-                // 已签到天数 + 漏签天数 = 用于判定的天数
-                int toBeDetermined = checkedDay + missedCheckDay;
+                // 已签到天数 + 漏签天数 = 用于判定今日是否已签到的天数
+                int allCheckedDay = checkedDay + missedCheckDay;
 
-//                Log.d(TAG, "toBeDetermined = " + toBeDetermined);
-                if (toBeDetermined == dayOfThisMonth) {
+//                Log.d(TAG, "allCheckedDay = " + allCheckedDay);
+                if (allCheckedDay == dayOfThisMonth) {
                     // 已签到天数 + 漏签天数 = 今天日期，表示今日已签到
 //                    Log.d(TAG, "今日已签到！");
 
@@ -172,8 +181,11 @@ public class AutoCheckService extends AccessibilityService {
                     for (int i = 0; i < 3; i++) {
                         simulateReactionTime();
                         performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK);
+
+                        // 重置所有按钮状态
+                        resetAllButtonStatus();
                     }
-                } else if (toBeDetermined == dayOfThisMonth - 1) {
+                } else if (!CheckPageButtonStatus.CHECK_BUTTON_CLICKED && allCheckedDay == dayOfThisMonth - 1) {
                     // 已签到天数 + 漏签天数 = 本月日期数 - 1，说明今日还未签到
 
                     AccessibilityNodeInfo targetTextNode = checkInfoNode.getParent();
@@ -199,6 +211,8 @@ public class AutoCheckService extends AccessibilityService {
                                 @Override
                                 public void onCompleted(GestureDescription gestureDescription) {
                                     super.onCompleted(gestureDescription);
+
+                                    CheckPageButtonStatus.CHECK_BUTTON_CLICKED = true;
                                     Log.d(TAG, "执行成功！");
                                 }
 
@@ -211,12 +225,17 @@ public class AutoCheckService extends AccessibilityService {
                             null);
                 }
 
-            } else if (nowPage == PageView.AD_PAGE) {
+            } else if (!CheckPageButtonStatus.AP_PAGE_SKIP_BUTTON_CLICKED && nowPage == PageView.AD_PAGE) {
                 // 先通过id去点击，没找到的话再通过字符串点击。
                 // 理论上通过id去查找控件的方式，效率和性能上是高于通过字符串查找的，特别是字符串的比较是非常耗时的。
                 boolean clickedResult = toClickTargetViewById(nodeInfo, MI_GAMING_COMMUNITY_PACKAGE + ":" + "id/mSplashBtJump");
-                if (!clickedResult) toClickTargetViewByText(nodeInfo, "跳过");
-//                Log.d(TAG, "点击结果：" + clickedResult);
+                if (!clickedResult) {
+                    clickedResult = toClickTargetViewByText(nodeInfo, "跳过");
+                }
+
+                if (clickedResult) {
+                    CheckPageButtonStatus.AP_PAGE_SKIP_BUTTON_CLICKED = true;
+                }
             }
 
         } else if (QQ_PACKAGE.equals(pagePackageName)) {
@@ -352,7 +371,7 @@ public class AutoCheckService extends AccessibilityService {
 
     private boolean toClickTargetViewByText(AccessibilityNodeInfo beFoundView, String text) {
         List<AccessibilityNodeInfo> viewList = beFoundView.findAccessibilityNodeInfosByText(text);
-
+        Log.d(TAG, "viewList = " + viewList.isEmpty());
         if (viewList.isEmpty()) return false;
 
         AccessibilityNodeInfo targetView = toFindTargetView(viewList);
@@ -447,5 +466,32 @@ public class AutoCheckService extends AccessibilityService {
         }
 
         return viewTree;
+    }
+
+    /**
+     * 重置所有按钮点击状态
+     */
+    public static void resetAllButtonStatus() {
+        CheckPageButtonStatus.resetAllButtonStatus();
+    }
+
+    private static class CheckPageButtonStatus {
+        // 未成年人保护弹窗[确定]按钮
+        static boolean MINOR_TIP_POPUP_CLICKED = false;
+        // 主页[签到福利]按钮
+        static boolean ENTER_CHECK_BUTTON_CLICKED = false;
+        // 广告页面[跳过]按钮
+        static boolean AP_PAGE_SKIP_BUTTON_CLICKED = false;
+        static boolean CHECK_BUTTON_CLICKED = false;
+
+        /**
+         * 重置所有按钮点击状态
+         */
+        public static void resetAllButtonStatus() {
+            MINOR_TIP_POPUP_CLICKED = false;
+            ENTER_CHECK_BUTTON_CLICKED = false;
+            AP_PAGE_SKIP_BUTTON_CLICKED = false;
+            CHECK_BUTTON_CLICKED = false;
+        }
     }
 }
